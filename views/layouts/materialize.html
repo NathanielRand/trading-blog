@@ -1,0 +1,32 @@
+{{define "materialize"}}
+<!DOCTYPE>
+<html>
+	<head>
+		<title>Priva - Private Shipping</title>
+		<!-- Compiled and minified CSS -->
+    	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+		<!--Import materialize.css-->
+      	<link type="text/css" rel="stylesheet" href="assets/css/priva.css"  media="screen,projection"/>
+		<!--Import Google Icon Font-->
+     	<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+		<!-- Google Font: Baloo Tammudu 2 -->
+    	<link href="https://fonts.googleapis.com/css2?family=Baloo+Tammudu+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+		<!--Let browser know website is optimized for mobile-->
+      	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>    
+	</head>		
+	<body class="teal lighten-4">
+		<div class="container">
+			{{template "yield" .}}
+		</div>
+		{{template "footer"}}
+		
+		<!-- JavaScript	-->
+		<!-- Compiled and minified JavaScript -->
+    	<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+		<!-- Auto Initiate Materialize JS -->
+		<script>
+			  M.AutoInit();
+		</script>
+	</body>
+</html>
+{{end}}

@@ -1,0 +1,43 @@
+body {
+	
+}
+
+.card {
+	border-radius: 30px 10px;
+}
+
+h1, h2, h3, h4, h4, h5, h6, a {
+	font-family: 'Baloo Tammudu 2', cursive;
+}
+
+h1 {
+	font-size: 400%;
+}
+
+h2 {
+	font-size: 275%;
+}
+
+h3 {
+	font-size: 250%;
+}
+
+p {
+	font-family: 'Baloo Tammudu 2', cursive;
+	font-size: 175%;
+}
+
+#landing-cover {
+	width: 100%;
+}
+
+#landing-search {
+	border-radius: 20px 10px;
+}
+
+// This css will only be used when the screen size is min 800px.
+@media screen and (min-width: 800px) {
+	#landing-cover {
+		width: 5%;
+	}
+}
