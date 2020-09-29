@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"priva-web/controllers"
 	"priva-web/views"
 
 	"github.com/gorilla/mux"
@@ -11,8 +12,11 @@ import (
 
 var h http.Handler = http.HandlerFunc(notFound404)
 
-var homeView *views.View
-var contactView *views.View
+var (
+	homeView *views.View
+	contactView *views.View
+)
+
 
 func notFound404(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
@@ -21,18 +25,12 @@ func notFound404(w http.ResponseWriter, r *http.Request) {
 
 func home(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	err := homeView.Template.ExecuteTemplate(w, homeView.Layout, nil)
-	if err != nil {
-		panic(err)
-	}
+	must(homeView.Render(w, nil))
 }
 
 func contact(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	err := contactView.Template.ExecuteTemplate(w, contactView.Layout, nil)
-	if err != nil {
-		panic(err)
-	}
+	must(contactView.Render(w, nil))
 }
 
 func faq(w http.ResponseWriter, r *http.Request) {
@@ -40,9 +38,17 @@ func faq(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "<h1>FAQ</h1>")
 }
 
+// A helper function that panics on any error
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 func main() {
 	homeView = views.NewView("materialize", "views/home.html")
 	contactView = views.NewView("materialize", "views/contact.html")
+	usersC := controllers.NewUsers()
 
 	r := mux.NewRouter()
 
@@ -57,8 +63,11 @@ func main() {
 	// Image routes
 	imageHandler := http.FileServer(http.Dir("./images/"))
 	r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", imageHandler))
+	
+	// User Routes 	
+	r.HandleFunc("/signup", usersC.New)
 
-	// 	Main routes
+	// Static routes
 	r.HandleFunc("/", home)
 	r.HandleFunc("/contact", contact)
 	r.HandleFunc("/faq", faq)

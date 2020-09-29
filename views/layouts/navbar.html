@@ -1,0 +1,20 @@
+{{define "navbar"}}
+	<!-- Dropdown Structure -->
+	<ul id="dropdown1" class="dropdown-content">
+	  <li><a href="/login">LOGIN</a></li>
+	  <li><a href="/signup">SIGNUP</a></li>
+	  <li class="divider"></li>
+	  <li><a href="/contact">HELP</a></li>
+	</ul>
+	<div class="navbar-fixed">
+		<nav>
+		  <div class="nav-wrapper teal lighten-3">
+			<a href="/" class="brand-logo left" style="margin-top:0.5%;margin-left:3%;">Priva</a>
+			<ul class="right">
+			  <!-- Dropdown Trigger -->
+			  <li><a class="dropdown-trigger" href="#!" data-target="dropdown1"><i class="material-icons right">clear_all</i></a></li>
+			</ul>
+		  </div>
+		</nav>
+	</div>
+{{end}}

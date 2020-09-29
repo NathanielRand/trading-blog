@@ -20,11 +20,24 @@ h2 {
 
 h3 {
 	font-size: 250%;
+	color: #4f9a94;
+}
+
+h4 {
+	font-size: 200%;
+	color: #4f9a94;
 }
 
 p {
 	font-family: 'Baloo Tammudu 2', cursive;
 	font-size: 175%;
+	color: #4f9a94;
+}
+
+/* IDs */
+
+#footer-menu {
+	font-size: 150%;
 }
 
 #landing-cover {
@@ -40,4 +53,9 @@ p {
 	#landing-cover {
 		width: 5%;
 	}
+}
+
+#signup-button {
+	border:1px solid #4f9a94;
+	border-radius: 9px 3px;
 }

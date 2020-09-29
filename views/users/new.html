@@ -1,0 +1,47 @@
+{{define "yield"}}
+<div class="row center">
+	<h3>
+		Welcome to Priva
+	</h3>
+</div>
+<div class="row">	
+	<div class="col s12 m4 offset-m4">
+		<div class="card teal lighten-5" style="border: 3px solid white;">
+			<div class="card-content">
+				<span class="card-title">
+					<h4>Sign Up</h4>
+				</span>
+				<div class="divider"></div><br>
+				<form>
+					<div class="row">
+						<div class="input-field col s12">
+							<i class="material-icons prefix teal-text text-lighten-2">account_circle</i>
+							<input id="username" name="username" type="text" class="validate teal-text">
+							<label for="username">Username</label>
+						</div>
+					</div>
+					<div class="row">
+						<div class="input-field col s12">
+							<i class="material-icons prefix teal-text text-lighten-2">email_outline</i>
+							<input id="email" name="email" type="email" class="validate">
+							<label for="email">Email</label>
+						</div>
+					</div>
+					<div class="row">
+						<div class="input-field col s12">
+							<i class="material-icons prefix teal-text text-lighten-2">lock_outline</i>
+							<input id="password" name="password" type="password" class="validate">
+							<label for="password">Password</label>
+						</div>
+					</div>
+					<div class="center">
+						<button id="signup-button" class="btn btn-large waves-effect waves-light center teal lighten-1" type="submit" name="action">
+							SIGN UP
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{{end}}

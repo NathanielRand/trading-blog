@@ -1,5 +1,5 @@
 {{define "materialize"}}
-<!DOCTYPE>
+<!DOCTYPE html>
 <html>
 	<head>
 		<title>Priva - Private Shipping</title>
@@ -15,6 +15,7 @@
       	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>    
 	</head>		
 	<body class="teal lighten-4">
+		{{template "navbar"}}
 		<div class="container">
 			{{template "yield" .}}
 		</div>

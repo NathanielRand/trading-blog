@@ -4,7 +4,7 @@ Server: Go
 Database: MySQL
 
 Course
-Bookmark: 6.3.3 Creating a template
+Bookmark: 6.5 Creating a template
 
 Start Up:
 1. Start db server
