@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
+	"priva-web/models"
+	"priva-web/rand"
 	"priva-web/views"
 )
 
 type Users struct {
-	NewView *views.View
+	NewView   *views.View
+	LoginView *views.View
+	us        models.UserService
 }
 
 type SignupForm struct {
@@ -17,9 +21,16 @@ type SignupForm struct {
 	Password string `schema:"password"`
 }
 
-func NewUsers() *Users {
+type LoginForm struct {
+	Email    string `schema:"email"`
+	Password string `schema:"password"`
+}
+
+func NewUsers(us models.UserService) *Users {
 	return &Users{
-		NewView: views.NewView("materialize", "users/new"),
+		NewView:   views.NewView("materialize", "users/new"),
+		LoginView: views.NewView("materialize", "users/login"),
+		us:        us,
 	}
 }
 
@@ -42,7 +53,95 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	if err := parseForm(r, &form); err != nil {
 		panic(err)
 	}
-	fmt.Fprintln(w, "Username is ", form.Username)
-	fmt.Fprintln(w, "Email is ", form.Email)
-	fmt.Fprintln(w, "Password ", form.Password)
+	user := models.User{
+		Username: form.Username,
+		Email:    form.Email,
+		Password: form.Password,
+	}
+	if err := u.us.Create(&user); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err := u.signIn(w, &user)
+	if err != nil {
+		// Temp error message for debugging.
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Redirect to the cookie test page to test the cookie
+	http.Redirect(w, r, "/cookietest", http.StatusFound)
+}
+
+// Login is used to process the log in form when a user
+// tries to log in as an existing user (via email & pw).
+//
+// POST /login
+func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
+	form := LoginForm{}
+	if err := parseForm(r, &form); err != nil {
+		panic(err)
+	}
+	// Authenticate the user.
+	user, err := u.us.Authenticate(form.Email, form.Password)
+	if err != nil {
+		switch err {
+		case models.ErrNotFound:
+			fmt.Fprintln(w, "Invalid email address.")
+		case models.ErrPasswordIncorrect:
+			fmt.Fprintln(w, "Incorrect password provided.")
+		case nil:
+			fmt.Fprintln(w, user)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	err = u.signIn(w, user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/cookietest", http.StatusFound)
+}
+
+// signIn is used to sign the given user in via cookies
+func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
+	// Check if user has remember token set, if not,
+	// set a new one and update user.
+	if user.Remember == "" {
+		token, err := rand.RememberToken()
+		if err != nil {
+			return err
+		}
+		user.Remember = token
+		err = u.us.Update(user)
+		if err != nil {
+			return err
+		}
+	}
+	// Populate cookie with user's remember token.
+	cookie := http.Cookie{
+		Name:     "remember_token",
+		Value:    user.Remember,
+		HttpOnly: true,
+	}
+	// Set cookie
+	http.SetCookie(w, &cookie)
+	return nil
+}
+
+// CookieTest is used to display cookies set on the current user.
+func (u *Users) CookieTest(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("remember_token")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// 	Use cookie value to search for user in database.
+	user, err := u.us.ByRemember(cookie.Value)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintln(w, user)
 }

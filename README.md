@@ -1,14 +1,21 @@
 Environment
 Client: HTML, CSS (Materialize CSS), Vanilla JS
 Server: Go
-Database: MySQL
+Database: PostgreSQL
 
 Course
-Bookmark: 6.5 Creating a template
+Bookmark: 11.4
 
-Start Up:
-1. Start db server
-2. Spin up dev web server 
 
-TASK: Spin up dev web server
-CMD: fresh
+Start db server:
+- CMD: sudo service postgresql start
+or
+- CMD: sudo service postgresql restart
+
+Login to db:
+- CMD: sudo -u postgres psql
+- Note: password is the formula
+
+Spin up dev web servervia Fresh:
+- CMD: fresh
+

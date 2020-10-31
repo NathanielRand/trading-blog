@@ -5,8 +5,18 @@ import (
 	"net/http"
 
 	"priva-web/controllers"
+	"priva-web/models"
 
 	"github.com/gorilla/mux"
+)
+
+const (
+	host = "localhost"
+	port = 5432
+	user = "postgres"
+	password = "temppassword"
+	dbname = "priva_dev"
+
 )
 
 var h http.Handler = http.HandlerFunc(notFound404)
@@ -29,8 +39,21 @@ func must(err error) {
 }
 
 func main() {
+	// Create a DB connection string and then use it to
+	// create our model service.
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s " +
+		"password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+	us, err := models.NewUserService(psqlInfo)
+	if err != nil {
+		panic(err)
+	}
+	defer us.Close()
+	us.AutoMigrate()
+	
+	// Controllers
 	staticC := controllers.NewStatic()
-	usersC := controllers.NewUsers()
+	usersC := controllers.NewUsers(us)
 
 	// Router
 	r := mux.NewRouter()
@@ -50,6 +73,11 @@ func main() {
 	// User Routes
 	r.HandleFunc("/signup", usersC.New).Methods("GET")
 	r.HandleFunc("/signup", usersC.Create).Methods("POST")
+	r.Handle("/login", usersC.LoginView).Methods("GET")
+	r.HandleFunc("/login", usersC.Login).Methods("POST")
+	
+	// Misc. Routes
+	r.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
 
 	// Static routes
 	r.Handle("/", staticC.Home).Methods("GET")
