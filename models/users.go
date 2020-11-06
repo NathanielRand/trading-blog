@@ -1,7 +1,6 @@
 package models
 
 import (
-	"errors"
 	"regexp"
 	"strings"
 
@@ -21,30 +20,62 @@ const (
 	hmacSecretKey = "VW5rivKgsnMV"
 )
 
-var (
+// Because we made the underlying type of our modelError
+// a string we can define these as constants instead of variables.
+const (
+	//	GENERAL ERRORS:
+	//
 	//	ErrNotFound is returned when a resource cannot be found
 	//	in the database.
-	ErrNotFound = errors.New("models: resource not found.")
-	//
+	ErrNotFound modelError = "models: resource not found."
 	//	ErrIDInvalid is returned when an invalid ID is provided
 	//	to a method like Delete.
-	ErrIDInvalid = errors.New("model: ID provided was invalid.")
+	ErrIDInvalid modelError = "model: ID provided was invalid."
+
+	//	REMEMBER ERRORS:
+	//
+	//	ErrRememberRequired is returned when a create or update
+	//	is attempted without a user remember token hash.
+	ErrRememberRequired modelError = "model: Remember token is required."
+	//	ErrRememberTooShort is returned when a remember token is
+	//	not at least 32 bytes.
+	ErrRememberTooShort modelError = "model: Remember token must be at least 32 bytes."
+
+	//	EMAIL ERRORS:
+	//
+	//	ErrEmailRequired is returned when an email address is not
+	//	provided when creating a user.
+	ErrEmailRequired modelError = "models: Email address is required."
+	//	ErrEmailInvalid is returned when an email address provided
+	//	does not match any of our requirements.
+	ErrEmailInvalid modelError = "models: Email address is invalid."
+	// 	ErrEmailTaken is returned when an update or create is attempted
+	// 	with an email address that is already in use.
+	ErrEmailTaken modelError = "models: Email address is already taken."
+
+	//	USERNAME ERRORS:
+	//
+	//	ErrUsernameRequired is returned when a username is not 
+	//	provided when creating a user.
+	ErrUsernameRequired modelError = "models: Username is required."
+	//	ErrEmailInvalid is returned when an email address provided
+	//	does not match any of our requirements.
+	ErrUsernameInvalid modelError = "models: Username is invalid."
+	// 	ErrEmailTaken is returned when an update or create is attempted
+	// 	with an email address that is already in use.
+	ErrUsernameTaken modelError = "models: Username is already taken."
+	
+	//	PASSWORD ERRORS:
 	//
 	//	ErrPasswordIncorrect is return when an invalid password
 	//	is used when attempting to authenticate a user.
-	ErrPasswordIncorrect = errors.New("models: Incorrect password provided.")
-	//
-	//	ErrEmailRequired is returned wehn an email address is not
-	//	provided when creating a user.
-	ErrEmailRequired = errors.New("models: Email address is required.")
-	//
-	//	ErrEmailInvalid is returned when an email address provided
-	//	does not match any of our requirements.
-	ErrEmailInvalid = errors.New("models: Email address is invalid.")
-	//
-	// 	ErrEmailTaken is returned when an update or create is attempted
-	// 	with an email address that is already in use.
-	ErrEmailTaken = errors.New("models: Email address is already taken.")
+	ErrPasswordIncorrect modelError = "models: Incorrect password provided."
+	//	ErrPasswordTooShort is returned when auser tries to set
+	//	a password that is less than 8 characters long.
+	ErrPasswordTooShort modelError = "models: Password must be at least 8 characters long."
+	// 	ErrPasswordRequired is returned when a create is attempted
+	//	without a user password provided.
+	ErrPasswordRequired modelError = "models: Password is required."
 )
 
 // Set this variable’s type to UserDB, and then assign a pointer
@@ -109,6 +140,33 @@ func NewUserService(connectionInfo string) (UserService, error) {
 
 /*
 //////////////////////////////////////////////////////////
+Public Errors - ATTN: Relocate to it's own package.
+//////////////////////////////////////////////////////////
+*/
+
+type modelError string
+
+func (e modelError) Error() string {
+	return string(e)
+}
+
+func (e modelError) Public() string {
+	s := strings.Replace(string(e), "models: ", "", 1)
+	// Split our string into a slice of strings
+	// everywhere there is a space using the Split function.
+	split := strings.Split(s, " ")
+	// Access only the first word of the message
+	// and pass it into the Title function to capitalize it.
+	split[0] = strings.Title(split[0])
+	// Update its value in the slice of strings
+	// then use the Join function11 to merge all
+	// of these strings back together reinserting
+	// the original spaces.
+	return strings.Join(split, " ")
+}
+
+/*
+//////////////////////////////////////////////////////////
 VALIDATION / NORMALIZATION LAYER
 //////////////////////////////////////////////////////////
 */
@@ -119,10 +177,11 @@ VALIDATION / NORMALIZATION LAYER
 type userValidator struct {
 	UserDB
 	hmac hash.HMAC
-	//	We are going to need acccess to our regular expression
+	//	We are going to need acccess to our regular expressions
 	//	from our userValidator methods, so rather than create
-	//	a global variable we will use a field on this type.
+	//	global variables we will use fields on this type.
 	emailRegex *regexp.Regexp
+	usernameRegex *regexp.Regexp
 }
 
 // newUserValidator constructs our userValidator.
@@ -132,6 +191,8 @@ func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
 		hmac:   hmac,
 		emailRegex: regexp.MustCompile(
 			`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,16}$`),
+		usernameRegex: regexp.MustCompile(
+			`^[A-Za-z0-9]{2,32}$`),
 	}
 }
 
@@ -199,13 +260,22 @@ func (us *userService) Authenticate(email, password string) (*User, error) {
 // like the ID, CreatedAt, and UpdatedAt fields.
 func (uv *userValidator) Create(user *User) error {
 	err := runUserValFns(user,
+		uv.passwordRequired,
+		uv.passwordMinLength,
 		uv.bcryptPassword,
+		uv.passwordHashRequired,
 		uv.setRememberIfUnset,
+		uv.rememberMinBytes,
 		uv.hmacRemember,
+		uv.rememberHashRequired,
 		uv.normalizeEmail,
 		uv.requireEmail,
 		uv.emailFormat,
-		uv.emailIsAvail)
+		uv.emailIsAvail,
+		uv.normalizeUsername,
+		uv.requireUsername,
+		uv.usernameFormat,
+		uv.usernameIsAvail)
 	if err != nil {
 		return err
 	}
@@ -215,13 +285,20 @@ func (uv *userValidator) Create(user *User) error {
 // Update
 func (uv *userValidator) Update(user *User) error {
 	err := runUserValFns(user,
+		uv.passwordMinLength,
 		uv.bcryptPassword,
-		uv.setRememberIfUnset,
+		uv.passwordHashRequired,
+		uv.rememberMinBytes,
 		uv.hmacRemember,
+		uv.rememberHashRequired,
 		uv.normalizeEmail,
 		uv.requireEmail,
 		uv.emailFormat,
-		uv.emailIsAvail)
+		uv.emailIsAvail,
+		uv.normalizeUsername,
+		uv.requireUsername,
+		uv.usernameFormat,
+		uv.usernameIsAvail)
 	if err != nil {
 		return err
 	}
@@ -275,28 +352,17 @@ func (uv *userValidator) ByEmail(email string) (*User, error) {
 	return uv.UserDB.ByEmail(user.Email)
 }
 
-// bcryptPassword will hash a user's password with an
-// app-wide pepper and bcrypt, which salts for us.
-func (uv *userValidator) bcryptPassword(user *User) error {
-	// Check if password field is empty. If not,
-	// the new password needs to be hashed.
-	if user.Password == "" {
-		return nil
+// ByUsername will normalize an username before passing
+// it on to the database layer to perform the query.
+func (uv *userValidator) ByUsername(username string) (*User, error) {
+	user := User{
+		Username: username,
 	}
-	// Pepper the password before hashing
-	pwBytes := []byte(user.Password + userPwPepper)
-	// Hash the password. Bcrypt handles salting automaticallly.
-	hashedBytes, err := bcrypt.GenerateFromPassword(
-		pwBytes, bcrypt.DefaultCost)
+	err := runUserValFns(&user, uv.normalizeUsername)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	// Set user's PasswordHash field to the converted hashedBytes string.
-	user.PasswordHash = string(hashedBytes)
-	// Set user's Password field to an empty string, as we do
-	// not store passwords in the database.
-	user.Password = ""
-	return nil
+	return uv.UserDB.ByUsername(user.Username)
 }
 
 // hmacRemember validation function.
@@ -326,34 +392,27 @@ func (uv *userValidator) setRememberIfUnset(user *User) error {
 	return nil
 }
 
-// idGreaterThan function is to make sure any user IDs
-// provided are greater than n. This is not a validation function,
-// instead it returns a validation function when we call it
-// with an unsigned integer.
-func (uv *userValidator) idGreaterThan(n uint) userValFn {
-	// Return a function that matches the userValFn definition
-	// (i.e must accept a pointer to a user and return an error).
-	return userValFn(func(user *User) error {
-		if user.ID <= n {
-			return ErrIDInvalid
-		}
+// rememberMinBytes func
+func (uv *userValidator) rememberMinBytes(user *User) error {
+	if user.Remember == "" {
 		return nil
-	})
+	}
+	n, err := rand.NBytes(user.Remember)
+	if err != nil {
+		return err
+	}
+	if n < 32 {
+		return ErrRememberTooShort
+	}
+	return nil
 }
 
-// idLessThan function is to make sure any user IDs
-// provided are less than n. This is not a validation function,
-// instead it returns a validation function when we call it
-// with an unsigned integer.
-func (uv *userValidator) idLessThan(n uint) userValFn {
-	// Return a function that matches the userValFn definition
-	// (i.e must accept a pointer to a user and return an error).
-	return userValFn(func(user *User) error {
-		if user.ID >= n {
-			return ErrIDInvalid
-		}
-		return nil
-	})
+// rememberHashRequired func
+func (uv *userValidator) rememberHashRequired(user *User) error {
+	if user.RememberHash == "" {
+		return ErrRememberRequired
+	}
+	return nil
 }
 
 // normalizeEmail function
@@ -413,6 +472,147 @@ func (uv *userValidator) emailIsAvail(user *User) error {
 	return nil
 }
 
+// normalizeUsername function
+func (uv *userValidator) normalizeUsername(user *User) error {
+	user.Username = strings.ToUpper(user.Username)
+	user.Username = strings.TrimSpace(user.Username)
+	return nil
+}
+
+// requireUsername function
+func (uv *userValidator) requireUsername(user *User) error {
+	if user.Username == "" {
+		return ErrUsernameRequired
+	}
+	return nil
+}
+
+// usernameFormat function uses a MatchString method which
+// will return true if a string matches our regex pattern
+// created on our constructed userValidator within the
+// newUserValidator function.
+func (uv *userValidator) usernameFormat(user *User) error {
+	// 	Check if username is present so this validation can
+	// 	be used in situations where an username isn’t required.
+	// 	We have a validation that requires an username which
+	//  will catch this case and return a more specific and helpful error.
+	if user.Username == "" {
+		return nil
+	}
+	// 	Check if email matches our regex pattern.
+	if !uv.usernameRegex.MatchString(user.Username) {
+		return ErrUsernameInvalid
+	}
+	return nil
+}
+
+// usernameIsAvail function
+func (uv *userValidator) usernameIsAvail(user *User) error {
+	existing, err := uv.ByUsername(user.Username)
+	if err == ErrNotFound {
+		// 	Username is available if we don't find
+		// 	a user with that username.
+		return nil
+	}
+	//	We can't continue our validation without
+	//	a successful query, so if we get any error other
+	//  than ErrNotFound we should return it.
+	if err != nil {
+		return err
+	}
+	// If we get here that means we found a user w/ this username
+	// , so we need to see if this is the same user we
+	// are updating, or if we have a conflict.
+	if user.ID != existing.ID {
+		return ErrUsernameTaken
+	}
+	return nil
+	
+}
+
+// bcryptPassword will hash a user's password with an
+// app-wide pepper and bcrypt, which salts for us.
+func (uv *userValidator) bcryptPassword(user *User) error {
+	// Check if password field is empty. If not,
+	// the new password needs to be hashed.
+	if user.Password == "" {
+		return nil
+	}
+	// Pepper the password before hashing
+	pwBytes := []byte(user.Password + userPwPepper)
+	// Hash the password. Bcrypt handles salting automaticallly.
+	hashedBytes, err := bcrypt.GenerateFromPassword(
+		pwBytes, bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	// Set user's PasswordHash field to the converted hashedBytes string.
+	user.PasswordHash = string(hashedBytes)
+	// Set user's Password field to an empty string, as we do
+	// not store passwords in the database.
+	user.Password = ""
+	return nil
+}
+
+// passwordMinLength func
+func (uv *userValidator) passwordMinLength(user *User) error {
+	// Check if password is present.
+	if user.Password == "" {
+		return nil
+	}
+	// Check length of password is 8 or more characters.
+	if len(user.Password) < 8 {
+		return ErrPasswordTooShort
+	}
+	return nil
+}
+
+// passwordRequired func
+func (uv *userValidator) passwordRequired(user *User) error {
+	if user.Password == "" {
+		return ErrPasswordRequired
+	}
+	return nil
+}
+
+// passwordHashRequired func
+func (uv *userValidator) passwordHashRequired(user *User) error {
+	if user.PasswordHash == "" {
+		return ErrPasswordRequired
+	}
+	return nil
+}
+
+// idGreaterThan function is to make sure any user IDs
+// provided are greater than n. This is not a validation function,
+// instead it returns a validation function when we call it
+// with an unsigned integer.
+func (uv *userValidator) idGreaterThan(n uint) userValFn {
+	// Return a function that matches the userValFn definition
+	// (i.e must accept a pointer to a user and return an error).
+	return userValFn(func(user *User) error {
+		if user.ID <= n {
+			return ErrIDInvalid
+		}
+		return nil
+	})
+}
+
+// idLessThan function is to make sure any user IDs
+// provided are less than n. This is not a validation function,
+// instead it returns a validation function when we call it
+// with an unsigned integer.
+func (uv *userValidator) idLessThan(n uint) userValFn {
+	// Return a function that matches the userValFn definition
+	// (i.e must accept a pointer to a user and return an error).
+	return userValFn(func(user *User) error {
+		if user.ID >= n {
+			return ErrIDInvalid
+		}
+		return nil
+	})
+}
+
 /*
 //////////////////////////////////////////////////////////
 DATABASE LAYER
@@ -441,6 +641,7 @@ type UserDB interface {
 	// 	Methods for querying for single users.
 	ByID(id uint) (*User, error)
 	ByEmail(email string) (*User, error)
+	ByUsername(username string) (*User, error)
 	ByRemember(token string) (*User, error)
 
 	// 	Methods for altering users.
@@ -535,6 +736,22 @@ func (ug *userGorm) ByEmail(email string) (*User, error) {
 	err := first(db, &user)
 	return &user, err
 }
+  
+// ByUsername looks up a user with the given username and
+// returns that user.
+// If the user is found, we will return a nil error
+// If the user is not found, we will return ErrNotFound
+// If there is another error, we will return an error with
+// more information about what went wrong. This may not be
+// an error generated by the models package.
+func (ug *userGorm) ByUsername(username string) (*User, error) {
+	var user User
+	db := ug.db.Where("username = ?", username)
+	err := first(db, &user)
+	return &user, err
+}
+   
+
 
 /*
 //////////////////////////////////////////////////////////

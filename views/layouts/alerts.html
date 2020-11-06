@@ -1,0 +1,8 @@
+{{define "alert"}}
+	<div class="row center-align" style="margin-top:2%;">
+		<div class="chip alert alert-{{.Level}}" role="alert" style="border:1px #ef9a9a inset;">
+			{{.Message}}
+			<i class="close material-icons" data-dismiss="alert">close</i>
+		</div>
+	</div>
+{{end}}

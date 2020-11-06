@@ -13,8 +13,9 @@
 					<div class="row">
 						<div class="input-field col s12">
 							<i class="material-icons prefix teal-text text-lighten-2">account_circle</i>
-							<input id="username" name="username" type="text" class="validate teal-text">
+							<input id="username" name="username" type="text" class="validate teal-text" data-length="32">
 							<label for="username">Username</label>
+							<span class="helper-text" data-error="WRONG" data-success="RIGHT"></span>
 						</div>
 					</div>
 					<div class="row">
@@ -22,6 +23,7 @@
 							<i class="material-icons prefix teal-text text-lighten-2">email_outline</i>
 							<input id="email" name="email" type="email" class="validate">
 							<label for="email">Email</label>
+							<span class="helper-text" data-error="WRONG" data-success="RIGHT"></span>
 						</div>
 					</div>
 					<div class="row">
@@ -29,6 +31,7 @@
 							<i class="material-icons prefix teal-text text-lighten-2">lock_outline</i>
 							<input id="password" name="password" type="password" class="validate">
 							<label for="password">Password</label>
+							<span class="helper-text" data-error="WRONG" data-success="RIGHT"></span>
 						</div>
 					</div>
 					<div class="center">

@@ -28,7 +28,7 @@ func main() {
 
 	// This will reset the database on every run, but is fine
 	// for testing things out.
-	us.DestructiveReset()
+	// us.DestructiveReset()
 
 	// Create a user
 	user := models.User{

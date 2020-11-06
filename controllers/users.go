@@ -39,9 +39,7 @@ func NewUsers(us models.UserService) *Users {
 //
 // GET /signup
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	if err := u.NewView.Render(w, nil); err != nil {
-		panic(err)
-	}
+	u.NewView.Render(w, nil)
 }
 
 // Create is used to process the signup form when a user
@@ -49,9 +47,16 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 //
 // POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
+	// If we never have an error we can pass "vd" into 
+	// our view with no changes, but if there is an 
+	// error we then only need to set it on the "vd"
+	// variable and it will be rendered in our view. 	
+	var vd views.Data
 	var form SignupForm
 	if err := parseForm(r, &form); err != nil {
-		panic(err)
+		vd.SetAlert(err)
+		u.NewView.Render(w, vd)
+		return
 	}
 	user := models.User{
 		Username: form.Username,
@@ -59,13 +64,13 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		Password: form.Password,
 	}
 	if err := u.us.Create(&user); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		vd.SetAlert(err)
+		u.NewView.Render(w, vd)
 		return
 	}
 	err := u.signIn(w, &user)
 	if err != nil {
-		// Temp error message for debugging.
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
 	// Redirect to the cookie test page to test the cookie
@@ -77,28 +82,29 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 //
 // POST /login
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
-	form := LoginForm{}
+	var vd views.Data
+	var form LoginForm
 	if err := parseForm(r, &form); err != nil {
-		panic(err)
+		vd.SetAlert(err)
+		u.LoginView.Render(w, vd)
+		return
 	}
 	// Authenticate the user.
 	user, err := u.us.Authenticate(form.Email, form.Password)
 	if err != nil {
 		switch err {
 		case models.ErrNotFound:
-			fmt.Fprintln(w, "Invalid email address.")
-		case models.ErrPasswordIncorrect:
-			fmt.Fprintln(w, "Incorrect password provided.")
-		case nil:
-			fmt.Fprintln(w, user)
+			vd.AlertError("No user exists with that email address.")
 		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			vd.SetAlert(err)
 		}
+		u.LoginView.Render(w, vd)
 		return
 	}
 	err = u.signIn(w, user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		vd.SetAlert(err)
+		u.LoginView.Render(w, vd)
 		return
 	}
 	http.Redirect(w, r, "/cookietest", http.StatusFound)

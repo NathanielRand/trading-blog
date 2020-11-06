@@ -49,6 +49,11 @@ func main() {
 		panic(err)
 	}
 	defer us.Close()
+	
+	//	ATTN: Uncomment to drop db. Remove in production.	
+	//	us.DestructiveReset()
+	
+	// 	Migrate the database
 	us.AutoMigrate()
 	
 	// Controllers
