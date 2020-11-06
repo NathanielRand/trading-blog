@@ -4,7 +4,7 @@ Server: Go
 Database: PostgreSQL
 
 Course
-Bookmark: 13.4
+Bookmark: Chapter 14 Creating the gallery resource
 
 
 Start db server:
